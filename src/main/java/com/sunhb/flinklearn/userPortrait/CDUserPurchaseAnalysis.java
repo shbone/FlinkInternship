@@ -3,19 +3,23 @@ package com.sunhb.flinklearn.userPortrait;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 
 import org.apache.flink.api.common.typeinfo.Types;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.environment.LocalStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink;
 import org.apache.flink.util.Collector;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,12 +40,15 @@ import static org.apache.flink.api.common.operators.Order.DESCENDING;
  * * 4. 按购买的商品数过滤：根据购买的商品数量进行过滤，可以筛选出单次购买较多或较少商品的用户，有助于分析用户的购买习惯和消费行为。
  * *
  */
+
 public class CDUserPurchaseAnalysis {
 
+    private static final String csvPath = "/home/root1/sunhb/selflearn/FlinkLearn/src/main/java/com/sunhb/flinklearn/data/CDNOW_master.csv";
+
+
+    private double Threshold = 50.0;
     public static void main(String[] args) throws Exception {
-        //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        String csvPath = "./src/main/java/com/sunhb/flinklearn/data/CDNOW_master.csv";
         env.setParallelism(1);
         DataStream<String> dataSource = env.readTextFile(csvPath).filter(new FilterFunction<String>() {
             @Override
@@ -62,15 +69,17 @@ public class CDUserPurchaseAnalysis {
             Double amount = Double.parseDouble(fields[3]);
             return new Tuple2<>(id, amount);
         }).returns(Types.TUPLE(Types.STRING, Types.DOUBLE));
-        DataStream<Tuple3<String, Double, Double>> userConsumptionMinMax = userNameAmountMap
-                .flatMap(new UserComsumption())
-                .keyBy(i -> i.f0)
-                .reduce((curr, next) -> {
-                    double max = Math.max(curr.f1, next.f1);
-                    double min = Math.min(curr.f2, next.f2);
-                    return Tuple3.of(curr.f0, max, min);
-                })
-                .returns(Types.TUPLE(Types.STRING, Types.DOUBLE, Types.DOUBLE));
+        //DataStream<Tuple3<String, Double, Double>> userConsumptionMinMax = userNameAmountMap
+        //        .keyBy(i->i.f0)
+        //        .flatMap(new UserComsumption())
+        //        .returns(Types.TUPLE(Types.STRING, Types.DOUBLE, Types.DOUBLE));
+
+        //2.1 过滤消费金额起伏
+        DataStream<Tuple2<String, Double>> userConsumptionExceeded = userNameAmountMap
+                .keyBy(i->i.f0)
+                .process(new UserConsumptionExceeded(20.0));
+                //.returns(Types.TUPLE(String,Double));
+
 
         //任务三
 
@@ -93,18 +102,18 @@ public class CDUserPurchaseAnalysis {
         SimpleStringEncoder<String> encoder = new SimpleStringEncoder<>("UTF-8");
         StreamingFileSink<String> streamingFileSink = StreamingFileSink.forRowFormat(new Path(output_path), encoder)
                 .build();
-        userProductsNum.map(tupel -> tupel.toString()).addSink(streamingFileSink);
-        userConsumptionMinMax.map(tuple -> tuple.toString()).addSink(streamingFileSink);
-        userProductsNum.print();
+        userProductsNum.map(tuple -> tuple.toString()).addSink(streamingFileSink);
+        //userConsumptionMinMax.map(tuple -> tuple.toString()).addSink(streamingFileSink);
+        userConsumptionExceeded.map(tuple -> tuple.toString()).addSink(streamingFileSink);
+        userConsumptionExceeded.print();
+        //userProductsNum.print();
         env.execute("User Consumption Analysis!");
     }
 }
 
 
-class UserComsumption implements FlatMapFunction<Tuple2<String, Double>, Tuple3<String, Double, Double>> {
+class UserComsumption extends RichFlatMapFunction<Tuple2<String, Double>, Tuple3<String, Double, Double>> {
     private static Map<String, Tuple2<Double, Double>> map = new HashMap<>();
-
-
     @Override
     public void flatMap(Tuple2<String, Double> userNameAmountMap, Collector<Tuple3<String, Double, Double>> collector) throws Exception {
 
@@ -120,5 +129,10 @@ class UserComsumption implements FlatMapFunction<Tuple2<String, Double>, Tuple3<
         }
         Tuple2<Double, Double> userConsumption = map.get(id);
         collector.collect(new Tuple3<>(id, userConsumption.f0, userConsumption.f1));
+    }
+
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
     }
 }

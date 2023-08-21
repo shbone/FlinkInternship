@@ -53,7 +53,6 @@ public class AccumulateAccountBitMap {
         }).returns(Types.TUPLE(Types.LONG,Types.LONG,Types.DOUBLE));
         //idFilterStream.print();
 
-
         //create StateDescriptor
         ValueStateDescriptor<Roaring64Bitmap> bitmapDescriptor = new ValueStateDescriptor(
                 "Roaring64Bitmap",

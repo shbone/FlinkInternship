@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.sunhb</groupId>
     <artifactId>FlinkLearn</artifactId>
-    <version>1kw-bitmap-15parallel-withBroadCast</version>
+    <version>0.0.1-SNAPSHOT</version>
     <name>FlinkLearn</name>
     <description>FlinkLearn</description>
     <properties>
@@ -16,9 +16,23 @@
         <scala.binary.version>2.12</scala.binary.version>
         <project.build.scope>provided</project.build.scope>
     </properties>
-
-
     <dependencies>
+
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients_2.12</artifactId>
+            <version>${flink-version}</version>
+        </dependency>
+
+
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-core</artifactId>
@@ -38,11 +52,25 @@
             <scope>compile</scope>
         </dependency>
 
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-java-bridge_2.12</artifactId>
+            <version>${flink-version}</version>
+            <!--<scope>compile</scope>-->
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-scala_2.12</artifactId>
+            <version>${flink-version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
             <version>${flink-version}</version>
-            <scope>${project.build.scope}</scope>
+            <!--<scope>${project.build.scope}</scope>-->
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

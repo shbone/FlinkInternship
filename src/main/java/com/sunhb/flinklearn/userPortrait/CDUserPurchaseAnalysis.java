@@ -21,6 +21,7 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSin
 import org.apache.flink.util.Collector;
 //import org.springframework.stereotype.Component;
 
+
 import java.util.HashMap;
 import java.util.Map;
 
